@@ -44,3 +44,55 @@ class Users(db.Model):
         self.tab_id = tab_id
         self.tab_username = tab_username
         self.tab_hash = tab_hash
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Register user"""
+
+    # User reached route via POST (as by submiting the form via POST)
+    if request.method == "POST":
+
+        # Ensure username was submited
+        if not request.form.get("username"):
+            return render_template("apology.html")
+
+        # Ensure password was submited
+        if not request.form.get("password"):
+            return render_template("apology.html")
+
+        # Ensure confirmation was submited
+        if not request.form.get("confirmation"):
+            return render_template("apology.html")
+
+        # Ensure password matches confirmation
+        if not request.form.get("password") == request.form.get("confirmation"):
+            return render_template("apology.html")
+
+        # Hash the password
+        hash_pas = generate_password_hash(request.form.get("password"))
+
+        # Check if user already exists and add if not
+        exists = Users.query.filter_by(tab_username=request.form.get("username")).first() is None
+        if not exists:
+            return render_template("apology.html")
+        else:
+            new_user = Users(request.form.get("username"), hash_pas)
+            db.session.add(new_user)
+            db.session.commit()
+
+            # Get user's id
+            current_user = Users.query.filter_by(tab_username=request.form.get("username")).first()
+
+            # Log in the user
+            session["user_id"] = current_user.tab_id
+
+            # Redirect to homepage
+            return redirect("/")
+
+    # User reached route via GET (just getting by link)
+    else:
+        render_template("register.html")
+
+
+
