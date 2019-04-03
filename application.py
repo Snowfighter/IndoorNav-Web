@@ -7,11 +7,35 @@ from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from helpers import login_required
+
 # Configure application
 app = Flask(__name__)
 
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+# Disable commit tracking
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Path to the database
+app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///./phpLiteAdmin/indoorNav.db'
+
+
+# Initiating db object
+db = SQLAlchemy(app)
+
+
+# Table class
+class User(db.Model):
+    __tablename__ = 'users'
+    tab_id = db.Column('id', db.Integer, primary_key=True, nullable=False)
+    tab_username = db.Column('username', db.Text, unique=True, nullable=False)
+    tab_hash = db.Column('hash', db.Text, unique=True, nullable=False)
+
+    def __init__(self, tab_username, tab_hash):
+        self.tab_username = tab_username
+        self.tab_hash = tab_hash
 
 
 # Ensure responses are not cashed
@@ -29,21 +53,11 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# Initiating db object
-db = SQLAlchemy(app)
 
-
-# Table class
-class Users(db.Model):
-    __tablename__ = 'users'
-    tab_id = db.Column('id', db.Integer, primary_key=True, nullable=False)
-    tab_username = db.Column('username', db.Text, nullable=False)
-    tab_hash = db.Column('hash', db.Text, nullable=False)
-
-    def __init__(self, tab_id, tab_username, tab_hash):
-        self.tab_id = tab_id
-        self.tab_username = tab_username
-        self.tab_hash = tab_hash
+@app.route("/")
+@login_required
+def index():
+    return render_template("index.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -73,16 +87,16 @@ def register():
         hash_pas = generate_password_hash(request.form.get("password"))
 
         # Check if user already exists and add if not
-        exists = Users.query.filter_by(tab_username=request.form.get("username")).first() is None
-        if exists:
+        exists = User.query.filter_by(tab_username=request.form.get("username")).first() is None
+        if not exists:
             return render_template("apology.html")
         else:
-            new_user = Users(request.form.get("username"), hash_pas)
+            new_user = User(tab_username=request.form.get("username"), tab_hash=hash_pas)
             db.session.add(new_user)
             db.session.commit()
 
             # Get user's id
-            current_user = Users.query.filter_by(tab_username=request.form.get("username")).first()
+            current_user = User.query.filter_by(tab_username=request.form.get("username")).first()
 
             # Log in the user
             session["user_id"] = current_user.tab_id
@@ -92,7 +106,7 @@ def register():
 
     # User reached route via GET (just getting by link)
     else:
-        render_template("register.html")
+        return render_template("register.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -114,7 +128,7 @@ def login():
             return render_template("apology.html")
 
         # Query database for the username
-        user = Users.query.filter_by(tab_username=request.form.get("username")).first()
+        user = User.query.filter_by(tab_username=request.form.get("username")).first()
 
         # Ensure the user exits and password is correct
         if user is None or not check_password_hash(user.tab_hash, request.form.get("password")):
