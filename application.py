@@ -50,7 +50,7 @@ class Users(db.Model):
 def register():
     """Register user"""
 
-    # User reached route via POST (as by submiting the form via POST)
+    # User reached route via POST (as by submiting the form)
     if request.method == "POST":
 
         # Ensure username was submited
@@ -74,7 +74,7 @@ def register():
 
         # Check if user already exists and add if not
         exists = Users.query.filter_by(tab_username=request.form.get("username")).first() is None
-        if not exists:
+        if exists:
             return render_template("apology.html")
         else:
             new_user = Users(request.form.get("username"), hash_pas)
@@ -93,6 +93,53 @@ def register():
     # User reached route via GET (just getting by link)
     else:
         render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Log user in"""
+
+    # Forget any session
+    session.clear()
+
+    # User reached route via POST (as by submiting the form)
+    if request.method == "POST":
+
+        # Ensure username was submited
+        if not request.form.get("username"):
+            return render_template("apology.html")
+
+        # Ensure password was submited
+        if not request.form.get("password"):
+            return render_template("apology.html")
+
+        # Query database for the username
+        user = Users.query.filter_by(tab_username=request.form.get("username")).first()
+
+        # Ensure the user exits and password is correct
+        if user is None or not check_password_hash(user.tab_hash, request.form.get("password")):
+            return render_template("apology.html")
+
+        # Remember which user is logged in
+        session["user_id"] = user.tab_id
+
+        # Redirect to home page
+        return redirect("/")
+
+    # User reached via GET (just getting by link)
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    """Log the user out"""
+
+    # Forget any user
+    session.clear()
+
+    # Redirect to the home page
+    return redirect("/")
+
 
 
 
