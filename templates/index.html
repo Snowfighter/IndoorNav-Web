@@ -5,5 +5,15 @@
 {% endblock %}
 
 {% block main %}
-	<img class= "border" src="https://i.imgflip.com/b62tb.jpg" alt="Obi-Wan">
+	<div id="mapwize">
+		<script>
+			var options = {
+				apiKey: '2170fdaf2c5e77383c7efa90048c4aa2',
+				centerOnVenue: '5ca87aab884bb1002db5f2f7'
+			}
+			MapwizeUI.map(options).then(map => {
+				console.log('Map is initialized')
+			})
+		</script>
+	</div>
 {% endblock %}
